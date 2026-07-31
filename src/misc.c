@@ -11,6 +11,7 @@
  */
 
 #include "misc.h"
+#include <sys/wait.h>
 
 static int trapped_error_code = 0;
 static int (*old_error_handler) (Display *d, XErrorEvent *e);

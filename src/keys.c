@@ -12,6 +12,7 @@
 
 #include "structs.h"
 #include "keys.h"
+#include <ctype.h>
 
 #ifndef NO_KBD
 
