@@ -54,8 +54,23 @@
 #<super>r=!xterm
 #<super>e=!!nautilus
 
-### Special keys, likely probably only available on extended keyboards. 
+### Special keys, likely probably only available on extended keyboards.
 
 #App=!matchbox-remote -mbmenu
 #Menu=!matchbox-remote -mbmenu
+
+### Sharp Zaurus on/off button.
+#
+# Reported by the matrix-keypad driver as plain KEY_SUSPEND (row 7, col 0
+# -- CORGI_KEY_OFF in corgi_patched.c), same as every other key on this
+# thumb keyboard. The project's zaurus XKB symbols file binds that keycode
+# to XF86Suspend (upstream xkeyboard-config's own name for this exact
+# evdev code) so it is grabbable at all -- without that, this line would
+# silently never fire, the same way it never did before that symbols file
+# was patched.
+#
+# Unlike the f11 case above, a bare global grab here is exactly right: no
+# client on this device has any use for a suspend keysym, so nothing
+# loses out the way the desktop's OK button did.
+XF86Suspend=!/usr/sbin/suspend
 
