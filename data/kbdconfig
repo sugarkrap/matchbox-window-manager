@@ -32,7 +32,21 @@
 <alt>escape=!matchbox-remote -mbmenu
 <alt>f4=close
 
-f11=fullscreen
+# f11=fullscreen
+#
+# Deliberately not bound on this device. The Sharp Zaurus thumb keyboard
+# has no function-key row at all, so the *only* thing that can send F11
+# here is the hardware OK button under the screen: the kernel board file
+# reports it as CORGI_KEY_OK = KEY_F11 (arch/arm/mach-pxa/corgi.c), which
+# evdev and XKB pass through unchanged as plain F11.
+#
+# A bare binding in this file becomes an XGrabKey() on the root window,
+# which takes the key away from every client. That made the OK button a
+# fullscreen toggle and, worse, meant matchbox-desktop never saw it -- so
+# "select an icon with the arrows and press OK" did nothing. Leaving this
+# commented is what lets the desktop bind OK as its activate key.
+#
+# <alt>f4=close above is fine to keep: Cancel sends bare F4, not <alt>F4.
 
 ### super should be a 'window' key, uncomment '#' if you have one.
 
