@@ -59,18 +59,20 @@
 #App=!matchbox-remote -mbmenu
 #Menu=!matchbox-remote -mbmenu
 
-### Sharp Zaurus on/off button.
+### Sharp Zaurus on/off button: NOT bound, on purpose.
 #
-# Reported by the matrix-keypad driver as plain KEY_SUSPEND (row 7, col 0
-# -- CORGI_KEY_OFF in corgi_patched.c), same as every other key on this
-# thumb keyboard. The project's zaurus XKB symbols file binds that keycode
-# to XF86Suspend (upstream xkeyboard-config's own name for this exact
-# evdev code) so it is grabbable at all -- without that, this line would
-# silently never fire, the same way it never did before that symbols file
-# was patched.
+# It is plain KEY_SUSPEND (row 7, col 0 -- CORGI_KEY_OFF in
+# corgi_patched.c), like any other key here, so binding XF86Suspend was
+# the obvious move -- but the project's zaurus XKB symbols file cannot
+# actually give that keycode a keysym: adding ANY previously-undefined
+# keycode there makes xsession's live xkbcomp upload to Xfbdev fail with
+# a reproducible XKEYBOARD BadValue, independent of which keycode or
+# keysym is used (tried three combinations). See
+# docs/DEADLETTER-XKB-LIVE-SETMAP.md for the full investigation. Without
+# a keysym on that keycode, XKeysymToKeycode has nothing to resolve
+# XF86Suspend to, so a binding here would be silently inert -- this
+# comment exists so the next person does not re-add it assuming it
+# should just work.
 #
-# Unlike the f11 case above, a bare global grab here is exactly right: no
-# client on this device has any use for a suspend keysym, so nothing
-# loses out the way the desktop's OK button did.
-XF86Suspend=!/usr/sbin/suspend
+#XF86Suspend=!/usr/sbin/suspend
 
