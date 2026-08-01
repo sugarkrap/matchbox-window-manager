@@ -216,6 +216,10 @@ typedef enum {
   _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
   _NET_WM_WINDOW_TYPE_POPUP_MENU,
   _MB_NUM_SYSTEM_MODAL_WINDOWS_PRESENT,
+  /* Appended, not inserted: this enum is index-matched against
+   * atom_names[] in ewmh_init(), so a new entry has to go at the end of
+   * both lists or every atom after it silently becomes the wrong one. */
+  WINDOW_STATE_HIDDEN,
   ATOM_COUNT
 
 } MBAtomEnum;

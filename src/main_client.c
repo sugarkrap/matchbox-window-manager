@@ -769,12 +769,23 @@ main_client_iconize(Client *c)
   client_set_state(c, IconicState);
   c->flags |= CLIENT_IS_MINIMIZED;
 
+  /* Publish _NET_WM_STATE_HIDDEN before unmapping. A taskbar needs it to
+   * draw this window as minimised rather than simply not-on-top, and
+   * main_client_unmap() below may never get as far as an ewmh update --
+   * it only activates a next client if there is one. */
+  ewmh_state_set(c);
+
   /* Make sure any transients get iconized too */
   stack_enumerate(w, p)
     if (p->trans == c)
       p->iconize(p);
 
   main_client_unmap(c);
+
+  /* Unconditional, for the last-window-minimised case: with no next
+   * client wm_activate_client() is never reached, so without this the
+   * root window lists still claim the window is up. */
+  ewmh_update_lists(w);
 }
 
 void
@@ -821,6 +832,7 @@ main_client_show(Client *c)
 	   /* Reset state from Iconized */
 	   client_set_state(c, NormalState);
 	   c->flags &= ~CLIENT_IS_MINIMIZED;
+	   ewmh_state_set(c); /* drop _NET_WM_STATE_HIDDEN again */
 
 	   /* Make sure any dialogs are shown too */
 	   stack_enumerate(w, p)
