@@ -127,8 +127,11 @@ wm_set_cursor_visibility(Wm *w, Bool visible);
 Client * 			/* Returns either desktop or main app client */
 wm_get_visible_main_client(Wm *w);
 
-void 
+void
 wm_toggle_desktop(Wm *w);
+
+void
+wm_show_desktop(Wm *w);
 
 Client 
 *wm_get_desktop(Wm *w);
