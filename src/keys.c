@@ -312,6 +312,15 @@ keys_load_config(Wm *w)
     { "prev",       KEY_ACTN_PREV_CLIENT        },
     { "close",      KEY_ACTN_CLOSE_CLIENT       },
     { "desktop",    KEY_ACTN_TOGGLE_DESKTOP     },
+    /* Like "desktop", but one-way: it only ever raises the desktop, it
+     * never drops back to the last app. That is what a hardware "Home"
+     * button wants -- see data/kbdconfig.
+     *
+     * The lookup below is a prefix match of this string against the
+     * config value, so this entry and "desktop" cannot shadow each
+     * other: neither name is a prefix of the other.
+     */
+    { "showdesktop", KEY_ACTN_SHOW_DESKTOP      },
     { "taskmenu",   KEY_ACTN_TASK_MENU_ACTIVATE },
     { "fullscreen", KEY_ACTN_FULLSCREEN         },
     { "hidetitle",  KEY_ACTN_HIDE_TITLEBAR      },

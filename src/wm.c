@@ -1163,6 +1163,9 @@ wm_handle_keypress(Wm *w, XKeyEvent *e)
 	    case KEY_ACTN_TOGGLE_DESKTOP:
 	      wm_toggle_desktop(w);
 	      break;
+	    case KEY_ACTN_SHOW_DESKTOP:
+	      wm_show_desktop(w);
+	      break;
 	    case KEY_ACTN_TASK_MENU_ACTIVATE:
 	      select_client_new(w);
 	      break;
@@ -2944,6 +2947,38 @@ wm_toggle_desktop(Wm *w)
      }
 
 
+}
+
+/* One-way version of the above: raise the desktop and leave it raised.
+ *
+ * A hardware "Home" button is not a toggle -- pressing Home while
+ * already on the desktop should keep you on the desktop, not bounce you
+ * back into the app you just left. wm_toggle_desktop() cannot express
+ * that, so this exists alongside it rather than replacing it, and the
+ * <Alt>d binding in data/kbdconfig keeps the toggle.
+ *
+ * This is the same operation _NET_SHOWING_DESKTOP with data.l[0] == 1
+ * already performs in ewmh.c; only the entry point is new.
+ */
+void
+wm_show_desktop(Wm *w)
+{
+  dbg("%s() called desktop flag is : %i \n", __func__,
+      (w->flags & DESKTOP_RAISED_FLAG));
+
+   if (!wm_get_desktop(w))
+     {
+       dbg("%s() couldn't find desktop \n", __func__ );
+       return;
+     }
+
+   if (w->flags & DESKTOP_RAISED_FLAG)
+     {
+       dbg("%s() desktop already raised, nothing to do\n", __func__);
+       return;
+     }
+
+   wm_activate_client(wm_get_desktop(w));
 }
 
 void
