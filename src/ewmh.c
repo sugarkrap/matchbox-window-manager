@@ -114,7 +114,8 @@ ewmh_init(Wm *w)
     "_NET_WM_WINDOW_TYPE_NOTIFICATION",
     "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU",
     "_NET_WM_WINDOW_TYPE_POPUP_MENU",
-    "_MB_NUM_SYSTEM_MODAL_WINDOWS_PRESENT"
+    "_MB_NUM_SYSTEM_MODAL_WINDOWS_PRESENT",
+    "_NET_WM_STATE_HIDDEN"
   };
 
   XInternAtoms (w->dpy, atom_names, ATOM_COUNT,
@@ -284,8 +285,40 @@ ewmh_handle_root_message(Wm *w, XClientMessageEvent *e)
 	     }
 	   wm_activate_client(c);
 	 }
+       else if (e->data.l[1] == w->atoms[WINDOW_STATE_HIDDEN]
+		&& ((c = wm_find_client(w, e->window, WINDOW)) != NULL)
+		&& c->type == MBCLIENT_TYPE_APP)
+	 {
+	   /* Minimise/restore on request. This is how a taskbar minimises a
+	    * window; matchbox itself only ever iconised from the titlebar's
+	    * minimise button, which most themes do not even draw.
+	    *
+	    * Restoring is wm_activate_client(), not just a flag clear:
+	    * main_client_show() is what resets IconicState, remaps the frame
+	    * and brings the client's dialogs back with it.
+	    */
+	   Bool minimized = (c->flags & CLIENT_IS_MINIMIZED) ? True : False;
+	   Bool want_min  = minimized;
+
+	   dbg("got EWMH hidden state change\n");
+
+	   switch (e->data.l[0])
+	     {
+	     case _NET_WM_STATE_REMOVE: want_min = False;      break;
+	     case _NET_WM_STATE_ADD:    want_min = True;       break;
+	     case _NET_WM_STATE_TOGGLE: want_min = !minimized; break;
+	     }
+
+	   if (want_min != minimized)
+	     {
+	       if (want_min)
+		 main_client_iconize(c);
+	       else
+		 wm_activate_client(c);
+	     }
+	 }
        return 1;
-     } 
+     }
    else if (e->message_type == w->atoms[_NET_SHOW_DESKTOP]
 	    && wm_get_desktop(w) ) 
      {
@@ -409,19 +442,26 @@ ewmh_update_lists(Wm *w)
       free(app_wins);
       
       /* Update _NET_CLIENT_LIST but with 'age' order rather than stacking */
-      
+
       cnt = 0;
-      
+
       list_enumerate(w->client_age_list, item)
 	{
+	  if (cnt >= n_stack_items(w)) /* wins[] is only this big */
+	    break;
 	  c = (Client*)item->data;
 	  wins[cnt++] = c->window;
 	 dbg("%s() adding %s\n", __func__, c->name);
 	}
-      
+
+      /* cnt, not n_stack_items(): the age list and the stack are
+       * maintained separately, and publishing the stack's length for the
+       * age list's contents means handing out uninitialised heap the
+       * moment the two disagree. Everything downstream -- taskbars,
+       * pagers, session managers -- reads this as a window list. */
       XChangeProperty(w->dpy, w->root, w->atoms[_NET_CLIENT_LIST] ,
 		      XA_WINDOW, 32, PropModeReplace,
-		      (unsigned char *)wins, n_stack_items(w));
+		      (unsigned char *)wins, cnt);
     }
   else
     {
@@ -514,14 +554,21 @@ ewmh_state_set(Client *c)
 {
   Wm   *w = c->wm;
 
-  Atom atom_states[4];
+  Atom atom_states[8];
   int  n_atom_states = 0;
 
-  /* We need to set ewmh state as some apps need to know when they 
+  /* We need to set ewmh state as some apps need to know when they
    * return from fullscreen
    */
   if (c->flags & CLIENT_FULLSCREEN_FLAG)
     atom_states[n_atom_states++] = w->atoms[WINDOW_STATE_FULLSCREEN];
+
+  /* Iconised. A taskbar has no other way to tell a minimised window from
+   * one that is merely stacked below the visible app -- in matchbox every
+   * main client but the top one is covered, yet still mapped.
+   */
+  if (c->flags & CLIENT_IS_MINIMIZED)
+    atom_states[n_atom_states++] = w->atoms[WINDOW_STATE_HIDDEN];
 
   if  (c->flags & CLIENT_IS_MODAL_FLAG)
     atom_states[n_atom_states++] = w->atoms[WINDOW_STATE_MODAL];
@@ -603,11 +650,14 @@ ewmh_set_allowed_actions(Wm *w, Client *c)
 
   Atom actions[] = {
     w->atoms[_NET_WM_ACTION_CLOSE],
-    0, 0
-  }; 
+    0, 0, 0
+  };
 
   if (c->type == MBCLIENT_TYPE_APP)
-    actions[num_actions++] = w->atoms[_NET_WM_ACTION_FULLSCREEN];
+    {
+      actions[num_actions++] = w->atoms[_NET_WM_ACTION_FULLSCREEN];
+      actions[num_actions++] = w->atoms[_NET_WM_ACTION_MINIMIZE];
+    }
 
   if (c->type == MBCLIENT_TYPE_PANEL || c->type == MBCLIENT_TYPE_DIALOG)
     actions[num_actions++] = w->atoms[_NET_WM_ACTION_MOVE];
@@ -823,6 +873,8 @@ static void set_supported(Wm *w) /*  */
     w->atoms[WINDOW_STATE],
     w->atoms[WINDOW_STATE_FULLSCREEN],
     w->atoms[WINDOW_STATE_MODAL],
+    w->atoms[WINDOW_STATE_HIDDEN],
+    w->atoms[_NET_WM_ACTION_MINIMIZE],
     w->atoms[_NET_SUPPORTED],
     w->atoms[_NET_CLIENT_LIST],
     w->atoms[_NET_NUMBER_OF_DESKTOPS],
