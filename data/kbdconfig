@@ -76,3 +76,30 @@
 #
 #XF86Suspend=!/usr/sbin/suspend
 
+### Sharp Zaurus Home button -> show the desktop.
+#
+# The four application buttons under the screen are matrix column 0 of
+# corgikbd_keymap[] (corgi_patched.c): rows 3, 4 and 5 are
+# CORGI_KEY_CALENDER/ADDRESS/MAIL, and row 6 -- the Home button, the one
+# with the house on the keycap -- is plain KEY_SYSRQ. Nothing else on
+# this keyboard reports KEY_SYSRQ, and nothing in this ROM used it, so
+# grabbing it costs no other function.
+#
+# Unlike the on/off button above, this needs no change to the zaurus XKB
+# symbols file and so does not run into the live-SetMap BadValue: the
+# stock evdev keycodes already carry KEY_SYSRQ as <PRSC>, and pc's
+# symbols already give <PRSC> the keysym Print at level 1. Print is
+# therefore resolvable by XKeysymToKeycode() as-is.
+#
+# "showdesktop", not "desktop": the latter is a toggle, so a second Home
+# press would drop back into the app you just left. Home should be
+# one-way -- press it, you are on the desktop, press it again, you are
+# still on the desktop. <Alt>d above keeps the toggle for anyone who
+# wants it.
+#
+# The apps are not closed or iconified, only covered: matchbox shows one
+# app at a time anyway, and the desktop is just another client being
+# raised above them. mb-applet-menu-launcher and the task menu
+# (<Alt>space) still list every running app afterwards.
+Print=showdesktop
+
