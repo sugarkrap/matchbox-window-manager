@@ -90,7 +90,22 @@
    <inactive pixmap="menubutton" />
   </button>
 
-  <button x="labelx" y="0" w="labelw" h="36"
+  <!-- Tap the title itself for the window menu.
+
+       Explicit bounds, NOT Default's x="labelx" w="labelw". Those are not
+       the label's box: labelx resolves to c->name_rendered_end_pos, the end
+       of the rendered title, while labelw is the full label width. So the
+       longer a window's title, the further right this button starts while
+       keeping its width, and it slides over the close button -- which it
+       then wins, because buttons are painted in order and this one is last,
+       so it is the topmost child and the one e->subwindow reports. The
+       result is a close button that cannot be tapped at all: every press in
+       the corner comes back as action="menu".
+
+       Fixed coordinates matching the label layer keep it between the two
+       buttons whatever the title says. Nothing here can express
+       min(labelx + labelw, 100%-48), so the bound has to be static. -->
+  <button x="54" y="0" w="100%-108" h="36"
    action="menu" options="inputonly" />
 
 </frame>
