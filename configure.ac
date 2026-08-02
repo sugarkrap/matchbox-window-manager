@@ -498,6 +498,7 @@ data/themes/Makefile
 data/themes/Default/Makefile
 data/themes/blondie/Makefile
 data/themes/MBOpus/Makefile
+data/themes/Piko/Makefile
 data/schemas/Makefile
 ])
 
