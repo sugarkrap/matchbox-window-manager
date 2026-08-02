@@ -758,6 +758,56 @@ main_client_hide(Client *c)
     }
 }
 
+/* Recompute SINGLE_FLAG from the stack.
+ *
+ * SINGLE_FLAG means "there is only one main client", and main_client_redraw()
+ * branches on it to decide whether next/prev/menu belong on the titlebar at
+ * all -- the else branch client_button_remove()s them. Everywhere else the
+ * flag is maintained by hand, at the two points where a main client is born
+ * (main_client_check_for_single()) or dies (main_client_unmap()), on the
+ * assumption that those are the only moments the count can change.
+ *
+ * Iconising breaks that assumption. An iconised client stays in the stack but
+ * goes c->mapped = False, and every stack accessor -- stack_get_below(),
+ * stack_get_highest(), and so the next/prev cycling built on them -- skips
+ * unmapped clients. So minimising or restoring a window changes the effective
+ * count without going through either hand-maintained path, and the flag drifts
+ * out of step with the titlebar it controls.
+ *
+ * Counting is the honest answer rather than another increment to get wrong:
+ * ask the same question the buttons themselves answer to, mapped app clients,
+ * and let the two agree by construction.
+ */
+static void
+main_client_sync_single_flag(Wm *w)
+{
+  Client *p = NULL;
+  int     n_mapped = 0;
+  int     was_single = (w->flags & SINGLE_FLAG) ? 1 : 0;
+
+  if (!stack_empty(w))
+    stack_enumerate(w, p)
+      if (p->type == MBCLIENT_TYPE_APP && p->mapped)
+	n_mapped++;
+
+  if (n_mapped > 1)
+    w->flags &= ~SINGLE_FLAG;
+  else
+    w->flags |= SINGLE_FLAG;
+
+  if (was_single == ((w->flags & SINGLE_FLAG) ? 1 : 0))
+    return;
+
+  dbg("%s() single flag now %s (%i mapped app clients)\n", __func__,
+      (w->flags & SINGLE_FLAG) ? "on" : "off", n_mapped);
+
+  /* The flag decides which buttons exist, so the titlebar showing them has
+   * to be rebuilt -- otherwise it keeps the set the old flag asked for.
+   */
+  if (w->stack_top_app && w->stack_top_app->mapped)
+    main_client_redraw(w->stack_top_app, False);
+}
+
 void
 main_client_iconize(Client *c)
 {
@@ -782,6 +832,14 @@ main_client_iconize(Client *c)
 
   main_client_unmap(c);
 
+  /* main_client_unmap() is otherwise only ever reached from
+   * main_client_destroy(), and its bookkeeping says so: when the client it
+   * is unmapping was the last mapped app it clears SINGLE_FLAG outright,
+   * which is right for a window that is going away and wrong for one that
+   * is coming back. Put the flag back on the facts.
+   */
+  main_client_sync_single_flag(w);
+
   /* Unconditional, for the last-window-minimised case: with no next
    * client wm_activate_client() is never reached, so without this the
    * root window lists still claim the window is up. */
@@ -794,6 +852,7 @@ main_client_show(Client *c)
   Wm     *w = c->wm;
 
   Client *visible_app_client = NULL;
+  Bool    was_minimized = False;
 
   dbg("%s() called on %s\n", __func__, c->name);
    
@@ -834,6 +893,8 @@ main_client_show(Client *c)
 	   c->flags &= ~CLIENT_IS_MINIMIZED;
 	   ewmh_state_set(c); /* drop _NET_WM_STATE_HIDDEN again */
 
+	   was_minimized = True;
+
 	   /* Make sure any dialogs are shown too */
 	   stack_enumerate(w, p)
 	     if (p->trans == c)
@@ -863,6 +924,14 @@ main_client_show(Client *c)
      }
 
    c->mapped = True;
+
+   /* Restoring changes the mapped-app count just as minimising did, and by
+    * the same back door -- so recount here too. Only on the way back from
+    * iconified: the ordinary map path already runs
+    * main_client_check_for_single(), and this must not second-guess it.
+    */
+   if (was_minimized)
+     main_client_sync_single_flag(w);
 }
 
 void

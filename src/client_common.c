@@ -747,11 +747,34 @@ client_buttons_delete_all(Client *c)
   c->buttons = NULL;
 }
 
+/* A press with no subwindow landed on bare frame, not on a button.
+ *
+ * This has to be rejected before the search below, because client_button_
+ * remove() retires a button by setting b->win = None while leaving the list
+ * entry (and its live action id) in place, so a None subwindow would match
+ * the first retired button and be reported as a press on it. That is not
+ * theoretical: main_client_redraw() retires next/prev on every transition
+ * into single-client mode, and client_button_do_ops() would then go on to
+ * XGrabPointer() the None window -- which fails with BadWindow, except that
+ * GrabSuccess is 0, so the failure reads as success and the loop waits for
+ * pointer events that a grab it never holds will never deliver. The window
+ * manager stops servicing anything, including the MapRequest of whatever
+ * application is starting.
+ */
+static Bool
+client_button_event_on_frame(XButtonEvent *e)
+{
+  return (e->subwindow == None) ? True : False;
+}
+
 MBClientButton*
 client_get_button_from_event(Client *c, XButtonEvent *e)
 {
   struct list_item *l = c->buttons;
   MBClientButton   *b = NULL;
+
+  if (client_button_event_on_frame(e))
+    return NULL;
 
   while (l != NULL)
     {
@@ -771,6 +794,9 @@ client_get_button_list_item_from_event(Client *c, XButtonEvent *e)
 {
   struct list_item *l = c->buttons;
   MBClientButton   *b = NULL;
+
+  if (client_button_event_on_frame(e))
+    return NULL;
 
   while (l != NULL)
     {
