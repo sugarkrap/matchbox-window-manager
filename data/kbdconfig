@@ -85,6 +85,16 @@
 # this keyboard reports KEY_SYSRQ, and nothing in this ROM used it, so
 # grabbing it costs no other function.
 #
+# This binding depends on the X server using the EVDEV keycode set, where
+# KEY_SYSRQ's evdev code 99 arrives as X keycode 107 and the layout calls
+# that <PRSC>. The server used to default to the xfree86 set instead (see
+# --with-xkb-default-rules in tools/build-x11-stack.sh), where 107 is
+# <DELE> and 111 is <PRSC> -- so this line fired on the up ARROW, whose
+# KEY_UP (103) arrives as 111, and the Home button silently produced
+# Delete. If Home ever goes quiet again, check the server's keycode set
+# before touching the kernel keymap: `xkbcomp :0 -` prints it, and the
+# first line of xkb_keycodes says which set is in force.
+#
 # Unlike the on/off button above, this needs no change to the zaurus XKB
 # symbols file and so does not run into the live-SetMap BadValue: the
 # stock evdev keycodes already carry KEY_SYSRQ as <PRSC>, and pc's
